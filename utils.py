@@ -32,6 +32,7 @@ import os
 import math
 from ctypes import *
 from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 import libtiepie
 
 PRODUCT_IDS = {
@@ -79,6 +80,21 @@ def try_open_device(argv, device_type):
         return dev
     else:
         raise Exception("No devices found")
+
+
+def create_ui(item, parent=None):
+
+    scp = item.open_oscilloscope() if (item.types & libtiepie.DEVICETYPE_OSCILLOSCOPE) != 0 else None
+    if scp:
+        from oscilloscopeui import OscilloscopeUI
+        scpui = OscilloscopeUI(scp, parent)
+        scpui.show()
+
+    gen = item.open_generator() if (item.types & libtiepie.DEVICETYPE_GENERATOR) != 0 else None
+    if gen:
+        from generatorui import GeneratorUI
+        genui = GeneratorUI(gen, parent)
+        genui.show()
 
 
 def val_to_str(value, digits=6, decimals=3):
@@ -151,5 +167,7 @@ def unwrap_QVariant(value):
         return value.toDouble()[0]
     elif(value.type() == QMetaType.QVariantMap):
         return dict((str(k), v) for k, v in value.toPyObject().iteritems())
+    elif(value.typeName() == "PyQt_PyObject"):
+        return value.toPyObject()
     else:
         raise Exception("Can't unwrap QVariant: " + value.typeName())

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # This file is part of the libtiepie-ui program.
 #
@@ -36,34 +35,46 @@ import libtiepie
 import utils
 
 
-if __name__ == '__main__':
-    import sys
+class SelectInstrumentsUI(QDialog):
+    def __init__(self, parent=None):
+        super(SelectInstrumentsUI, self).__init__(parent)
 
-    try:
-        libtiepie.device_list.update()
+        mainLayout = QVBoxLayout()
 
-        dev_count = len(libtiepie.device_list)
+        self._list = QListView(self)
+        self._list_data = QStandardItemModel(self._list)
+        self._list_data_rows = []
+        self._list.setModel(self._list_data)
+        mainLayout.addWidget(self._list)
 
-        if dev_count == 0:
-            raise Exception("No devices found")
-        elif dev_count == 1:
-            app = QApplication(sys.argv)
+        buttonLayout = QHBoxLayout()
+        mainLayout.addLayout(buttonLayout)
 
-            parent = QWidget()
-            utils.create_ui(libtiepie.device_list[0], parent)
+        buttonLayout.addStretch()
 
-            sys.exit(app.exec_())
-        else:
-            from selectinstrumentsui import SelectInstrumentsUI
+        btn = QPushButton("Open")
+        btn.clicked.connect(self._open_clicked)
+        buttonLayout.addWidget(btn)
 
-            app = QApplication(sys.argv)
+        self._update_list()
 
-            parent = QWidget()
+        self.setLayout(mainLayout)
+        self.setWindowTitle("Select instruments")
+        self.resize(400, 200)
 
-            ui = SelectInstrumentsUI(parent)
-            ui.show()
+    def _update_list(self):
+        self._list_data.clear()
 
-            sys.exit(app.exec_())
-    except Exception, e:
-        print(e.message, file=sys.stderr)
-        sys.exit(1)
+        for dev in libtiepie.device_list:
+            item = QStandardItem(dev.name + " s/n " + str(dev.serial_number))
+            item.setCheckable(True)
+            item.setData(dev)
+            self._list_data.appendRow(item)
+            self._list_data_rows.append(item)
+
+    def _open_clicked(self, checked):
+        for row in self._list_data_rows:
+            if row.checkState() == Qt.Checked:
+                utils.create_ui(utils.unwrap_QVariant(row.data()), self.parent())
+
+        self.hide()
