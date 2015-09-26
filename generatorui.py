@@ -57,7 +57,7 @@ ROW_SYMMETRY = 9
 ROW_BUTTONS = 10
 
 
-class GeneratorUI(QWidget):
+class GeneratorUI(QDialog):
     def __init__(self, gen, parent=None):
         super(GeneratorUI, self).__init__(parent)
 
