@@ -104,7 +104,7 @@ class OscilloscopeUI(QMainWindow):
 
         glw = pyqtgraph.GraphicsLayoutWidget(self)
         for i in range(len(scp.channels)):
-            glw.addPlot(i, 0)
+            self._setup_plot(glw.addPlot(i, 0))
         self.setCentralWidget(glw)
 
         self.setWindowTitle(scp.name + " s/n " + str(scp.serial_number))
@@ -254,6 +254,11 @@ class OscilloscopeUI(QMainWindow):
         self._scp.set_event_data_ready(self._fd_dataready)
         self._notifier_dataready = QSocketNotifier(self._fd_dataready, QSocketNotifier.Read, self)
         self._notifier_dataready.activated.connect(self._event_dataready)
+
+    def _setup_plot(self, plot):
+        time_axis = plot.getAxis('bottom')
+        time_axis.enableAutoSIPrefix()
+        time_axis.setLabel(units='s')
 
     def _sample_frequency_changed(self, checked):
         if checked:
@@ -456,11 +461,14 @@ class OscilloscopeUI(QMainWindow):
                     self._menu_trigger_times_act_group[i].addAction(action)
 
     def _start(self, checked):
-        self._continuous = True
-        self._scp.start()
+        self._do_start(True)
 
     def _oneshot(self, checked):
-        self._continuous = False
+        self._do_start(False)
+
+    def _do_start(self, continuous):
+        self._continuous = continuous
+        self._sample_frequency = self._scp.sample_frequency
         self._scp.start()
 
     def _stop(self, checked):
@@ -496,6 +504,8 @@ class OscilloscopeUI(QMainWindow):
         # Plot data
         glw = self.centralWidget()
 
+        timebase = np.linspace(0, scp._record_length / self._sample_frequency, scp._record_length, endpoint=False)
+
         i = 0
         for chnum, chdata in zip(range(len(self._scp.channels)), data):
             if chdata is not None:
@@ -504,9 +514,11 @@ class OscilloscopeUI(QMainWindow):
                     plot.clear()
                 else:
                     plot = glw.addPlot(i, 0)
+                    self._setup_plot(plot)
                 ch = self._scp.channels[chnum]
-                plot.plot(y=chdata, pen=LINE_COLORS[chnum % len(LINE_COLORS)])
+                plot.plot(y=chdata, x=timebase, pen=LINE_COLORS[chnum % len(LINE_COLORS)])
                 plot.setYRange(ch.data_value_min, ch.data_value_max)
+
                 i += 1
 
         # Remove unused plots:
@@ -516,7 +528,7 @@ class OscilloscopeUI(QMainWindow):
             plot = glw.getItem(i, 0)
 
         if self._continuous:
-            self._scp.start()
+            self._do_start(self._continuous)
 
 
 if __name__ == '__main__':
