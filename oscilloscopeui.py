@@ -131,6 +131,11 @@ class OscilloscopeUI(QMainWindow):
             action.setData(value * 0.01)
             action.toggled.connect(self._pre_sample_ratio_changed)
             act_group.addAction(action)
+        action = submenu.addAction("User defined")
+        action.setCheckable(True)
+        action.setData(None)
+        action.triggered.connect(self._pre_sample_ratio_changed)
+        act_group.addAction(action)
 
         # Channels:
         self._menu_channels = []
@@ -174,6 +179,11 @@ class OscilloscopeUI(QMainWindow):
             action.setData(to["value"])
             action.toggled.connect(self._trigger_timeout_changed)
             act_group.addAction(action)
+        action = submenu.addAction("User defined")
+        action.setCheckable(True)
+        action.setData(None)
+        action.triggered.connect(self._trigger_timeout_changed)
+        act_group.addAction(action)
 
         submenu = self._menu_trigger.addMenu("Source")
         act_group = QActionGroup(self)
@@ -219,6 +229,11 @@ class OscilloscopeUI(QMainWindow):
                 action.setData({"index": i, "value": value * 0.01})
                 action.toggled.connect(self._trigger_level_changed)
                 act_group.addAction(action)
+            action = submenu.addAction("User defined")
+            action.setCheckable(True)
+            action.setData({"index": i, "value": None})
+            action.triggered.connect(self._trigger_level_changed)
+            act_group.addAction(action)
             i += 1
 
         i = 0
@@ -230,6 +245,11 @@ class OscilloscopeUI(QMainWindow):
                 action.setData({"index": i, "value": value * 0.01})
                 action.toggled.connect(self._trigger_hysteresis_changed)
                 act_group.addAction(action)
+            action = submenu.addAction("User defined")
+            action.setCheckable(True)
+            action.setData({"index": i, "value": None})
+            action.triggered.connect(self._trigger_hysteresis_changed)
+            act_group.addAction(action)
             i += 1
 
         self._update_sample_frequency()
@@ -262,7 +282,13 @@ class OscilloscopeUI(QMainWindow):
 
     def _sample_frequency_changed(self, checked):
         if checked:
-            self._scp.sample_frequency = utils.unwrap_QVariant(self.sender().data())
+            value = utils.unwrap_QVariant(self.sender().data())
+            if value is None:
+                value, ok = QInputDialog.getDouble(self, "", "Enter sample frequency:", self._scp.sample_frequency, 1, self._scp.sample_frequency_max)
+                if ok:
+                    self._scp.sample_frequency = value
+            else:
+                self._scp.sample_frequency = value
 
             self._update_record_length()
             # TODO: self._update_trigger_time_out()
@@ -270,11 +296,23 @@ class OscilloscopeUI(QMainWindow):
 
     def _record_length_changed(self, checked):
         if checked:
-            self._scp.record_length = utils.unwrap_QVariant(self.sender().data())
+            value = utils.unwrap_QVariant(self.sender().data())
+            if value is None:
+                value, ok = QInputDialog.getInt(self, "", "Enter record length:", self._scp.record_length, 1, self._scp.verify_record_length(RECORD_LENGTH_MAX))
+                if ok:
+                    self._scp.record_length = value
+            else:
+                self._scp.record_length = value
 
     def _pre_sample_ratio_changed(self, checked):
         if checked:
-            self._scp.pre_sample_ratio = utils.unwrap_QVariant(self.sender().data())
+            value = utils.unwrap_QVariant(self.sender().data())
+            if value is None:
+                value, ok = QInputDialog.getDouble(self, "", "Enter pre sample ratio:", self._scp.pre_sample_ratio, 0, 10)
+                if ok:
+                    self._scp.pre_sample_ratio = value
+            else:
+                self._scp.pre_sample_ratio = value
 
     def _channel_enabled_changed(self, checked):
         self._scp.channels[utils.unwrap_QVariant(self.sender().data())].enabled = checked
@@ -296,7 +334,14 @@ class OscilloscopeUI(QMainWindow):
 
     def _trigger_timeout_changed(self, checked):
         if checked:
-            self._scp.trigger_time_out = utils.unwrap_QVariant(self.sender().data())
+            value = utils.unwrap_QVariant(self.sender().data())
+            if value is None:
+                max = self._scp.verify_trigger_time_out(1e100)
+                value, ok = QInputDialog.getDouble(self, "", "Enter trigger time out:", self._scp.trigger_time_out, 0, max, 3)
+                if ok:
+                    self._scp.trigger_time_out = value
+            else:
+                self._scp.trigger_time_out = value
 
     def _trigger_source_changed(self, checked):
         data = utils.unwrap_QVariant(self.sender().data())
@@ -319,12 +364,22 @@ class OscilloscopeUI(QMainWindow):
     def _trigger_level_changed(self, checked):
         if checked:
             data = utils.unwrap_QVariant(self.sender().data())
-            self._trigger_source.levels[data["index"]] = data["value"]
+            if data["value"] is None:
+                value, ok = QInputDialog.getDouble(self, "", "Enter trigger level:", self._trigger_source.levels[data["index"]] * 100, 0, 100)
+                if ok:
+                    self._trigger_source.levels[data["index"]] = value
+            else:
+                self._trigger_source.levels[data["index"]] = data["value"]
 
     def _trigger_hysteresis_changed(self, checked):
         if checked:
             data = utils.unwrap_QVariant(self.sender().data())
-            self._trigger_source.hystereses[data["index"]] = data["value"]
+            if data["value"] is None:
+                value, ok = QInputDialog.getDouble(self, "", "Enter trigger hysteresis:", self._trigger_source.hystereses[data["index"]] * 100, 0, 100)
+                if ok:
+                    self._trigger_source.hystereses[data["index"]] = value
+            else:
+                self._trigger_source.hystereses[data["index"]] = data["value"]
 
     def _trigger_condition_changed(self, checked):
         if checked:
@@ -334,7 +389,14 @@ class OscilloscopeUI(QMainWindow):
     def _trigger_time_changed(self, checked):
         if checked:
             data = utils.unwrap_QVariant(self.sender().data())
-            self._trigger_source.times[data["index"]] = data["value"]
+            if data["value"] is None:
+                min = self._trigger_source.times.verify(data["index"], 1e-100)
+                max = self._trigger_source.times.verify(data["index"], 1e100)
+                value, ok = QInputDialog.getDouble(self, "", "Enter trigger time:", self._trigger_source.times[data["index"]], min, max, 9)
+                if ok:
+                    self._trigger_source.times[data["index"]] = value
+            else:
+                self._trigger_source.times[data["index"]] = data["value"]
 
     def _update_sample_frequency(self):
         sample_frequency = self._scp.sample_frequency
@@ -347,6 +409,11 @@ class OscilloscopeUI(QMainWindow):
             action.setData(value)
             action.toggled.connect(self._sample_frequency_changed)
             self._menu_sample_frequency_act_group.addAction(action)
+        action = menu.addAction("User defined")
+        action.setCheckable(True)
+        action.setData(None)
+        action.triggered.connect(self._sample_frequency_changed)
+        self._menu_sample_frequency_act_group.addAction(action)
 
     def _update_record_length(self):
         record_length = self._scp.record_length
@@ -359,6 +426,11 @@ class OscilloscopeUI(QMainWindow):
             action.setData(int(value))
             action.toggled.connect(self._record_length_changed)
             self._menu_record_length_act_group.addAction(action)
+        action = menu.addAction("User defined")
+        action.setCheckable(True)
+        action.setData(None)
+        action.triggered.connect(self._record_length_changed)
+        self._menu_record_length_act_group.addAction(action)
 
     def _update_channel_range(self, index):
         ch = self._scp.channels[index]
@@ -459,6 +531,11 @@ class OscilloscopeUI(QMainWindow):
                     action.setData({"index": i, "value": value})
                     action.toggled.connect(self._trigger_time_changed)
                     self._menu_trigger_times_act_group[i].addAction(action)
+                action = menu.addAction("User defined")
+                action.setCheckable(True)
+                action.setData({"index": i, "value": None})
+                action.triggered.connect(self._trigger_time_changed)
+                self._menu_trigger_times_act_group[i].addAction(action)
 
     def _start(self, checked):
         self._do_start(True)

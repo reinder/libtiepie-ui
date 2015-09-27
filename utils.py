@@ -169,5 +169,7 @@ def unwrap_QVariant(value):
         return dict((str(k), v) for k, v in value.toPyObject().iteritems())
     elif(value.typeName() == "PyQt_PyObject"):
         return value.toPyObject()
+    elif(value.isNull()):
+        return None
     else:
         raise Exception("Can't unwrap QVariant: " + value.typeName())
