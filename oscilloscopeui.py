@@ -84,7 +84,7 @@ TRIGGER_CONDITIONS = [
     {"value": libtiepie.TC_LARGER, "name": "Larger"},
 ]
 
-LINE_COLORS = ["00ff00", "00ffff", "0000ff", "ff0000"]
+LINE_COLORS = ["00ff00", "00ffff", "0000ff", "ff0000", "ff8000", "ff0080", "ffff00", "ff00ff"]
 
 MENU_CHANNEL_RANGE_INDEX = 3
 
